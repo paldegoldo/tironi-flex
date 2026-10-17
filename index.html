@@ -218,7 +218,6 @@ button{font:inherit;color:inherit}
       <p id="team-note"></p>
     </div>
     <p class="muted howto" id="howto">Abre el chat de un amigo en el WhatsApp de Tironi para jugar su nivel. Se juega en PC con teclado.</p>
-    <button class="btn ghost" id="rank-btn" hidden>🏆 Ver el ranking</button>
     <button class="btn ghost" id="edit-btn" hidden>✎ Editar textos</button>
   </section>
   <div class="phone" id="phone">
@@ -237,7 +236,7 @@ button{font:inherit;color:inherit}
     </div>
     <div class="screen" id="scr-rank" hidden>
       <div class="statusbar"><span id="clock3">21:47</span><span>▂▄▆ 5G ▮▮▮</span></div>
-      <header class="wa-head"><button id="r-back" aria-label="Volver a los chats">←</button><span class="av rank-av" aria-hidden="true">🏆</span><div class="who"><b>Ranking</b><span id="r-status">Carrera contra Livo</span></div><button id="r-reload" class="r-reload" aria-label="Actualizar ranking" title="Actualizar">↻</button></header>
+      <header class="wa-head"><button id="r-back" aria-label="Volver a los chats">←</button><span class="av rank-av" aria-hidden="true">🏆</span><div class="who"><b id="r-name">Ranking</b><span id="r-status">Carrera contra Livo</span></div><button id="r-reload" class="r-reload" aria-label="Actualizar ranking" title="Actualizar">↻</button></header>
       <div class="r-list" id="r-list" aria-live="polite"></div>
       <footer class="wa-foot" id="r-foot"></footer>
     </div>
@@ -542,7 +541,6 @@ function renderList() {
     if (!o.locked) b.addEventListener('click', o.open); else b.disabled = true;
     box.appendChild(b);
   };
-  if (RK.on) item({ name:'Ranking', av:{ txt:'🏆', bg:'linear-gradient(135deg,#ffc23a,#b0601a)' }, tag:'Récords', tagOk:true, preview:rankPreview(), time:'', open:() => openRank() });
   const gl = groupLines(), gNew = Math.max(0, FRIENDS.filter((f) => ST.done[f.id]).length - (ST.groupSeen || 0));
   item({ name:TXT.menu.grupo.nombre, av:GROUP.av, preview:lastText(gl), time:gNew ? 'ahora' : 'hoy', badge:gNew, open:() => openGroup() });
   for (const f of FRIENDS) {
@@ -598,7 +596,7 @@ function openChat(id, newLines) {
   const r = ST.res[id];
   const footer = () => {
     const btns = [[ST.done[id] ? f.again : f.go, '', () => launch(id)]];
-    if (RK.on && RANK_INFO[id]) btns.push(['🏆 Ranking', 'alt', () => openRank()]);
+    if (RK.on && RANK_INFO[id]) btns.push(['🏆 Ranking', 'alt', () => openRank(id)]);
     foot(btns, ST.done[id] ? '✓ ' + f.name + ' ya está en la partida' : 'Se juega con teclado · ' + f.lvl);
     const b = $('#c-foot .go'); if (b) b.focus();
     if (RK.just === id) { RK.just = null; rankAfter(id); }
@@ -763,9 +761,9 @@ addEventListener('keydown', (e) => { if (e.code === 'Escape' && !$('#editor').hi
    RANKING (Firebase): tabla de récords compartida
    ========================================================= */
 const FB_CONFIG = {"apiKey": "AIzaSyCUPMd5M82Jh_53N2WLpeVOT4off5V1iek", "authDomain": "tironi-flex.firebaseapp.com", "projectId": "tironi-flex", "storageBucket": "tironi-flex.firebasestorage.app", "messagingSenderId": "380533354168", "appId": "1:380533354168:web:72d96b7dfb3f317ebc4e4d"};
-const RANK_INFO = { nivel1:{ titulo:'Carrera contra Livo', gana:'¡Le ganaste al Livo!', vacio:'Nadie le ha ganado al Livo todavía. ¡Sé el primero!', sin:'Gánale al Livo para aparecer aquí.' } };
+const RANK_INFO = { nivel1:{ nombre:'Livo', titulo:'Carrera contra Livo', gana:'¡Le ganaste al Livo!', vacio:'Nadie le ha ganado al Livo todavía. ¡Sé el primero!', sin:'Gánale al Livo para aparecer aquí.' } };
 const FB = window.TIRONI_FB || null;
-const RK = { on:false, ready:Promise.resolve(false), nivel:'nivel1', top:null, err:false, loading:false, just:null, apodoT:null };
+const RK = { on:false, ready:Promise.resolve(false), nivel:'nivel1', tops:{}, top:null, err:false, loading:false, just:null, apodoT:null };
 let APODO = ''; try { APODO = localStorage.getItem('tironi-apodo') || ''; } catch (e) {}
 if (!ST.pend || typeof ST.pend !== 'object') ST.pend = {};
 const fmt2 = (t) => { const m = Math.floor(t / 60), s = t - m * 60; return m + ':' + (s < 10 ? '0' : '') + s.toFixed(2); };
@@ -773,18 +771,23 @@ const cleanName = (v) => String(v || '').replace(/[\u0000-\u001f<>]/g, '').repla
 if (FB_CONFIG && FB) { RK.on = true; RK.ready = FB.init(FB_CONFIG).then(() => true, (e) => { console.warn('ranking', e); return false; }); }
 async function ready() { let ok = await RK.ready; if (!ok && RK.on) { RK.ready = FB.init(FB_CONFIG).then(() => true, (e) => { console.warn('ranking', e); return false; }); ok = await RK.ready; } return ok; }
 async function loadTop(force) {
+  RK.top = RK.tops[RK.nivel] || null;
   if (RK.top && !force) return RK.top;
   if (!(await ready())) throw new Error('sin conexión');
   const [rows, me] = await Promise.all([FB.top(RK.nivel, 50), FB.mine(RK.nivel)]);
   let meRow = null;
   if (me && !rows.some((r) => r.uid === me.uid)) { const st = await FB.stats(RK.nivel, me.tiempo); meRow = Object.assign({ pos:st.pos }, me); }
-  RK.top = { rows, me, meRow, uid:FB.uid() }; RK.err = false; return RK.top;
+  RK.top = RK.tops[RK.nivel] = { rows, me, meRow, uid:FB.uid() }; RK.err = false; return RK.top;
 }
 function rankPreview() {
   const T = RK.top; if (!T) return RK.err ? 'Sin conexión' : 'Cargando…';
   return T.rows.length ? '🥇 ' + T.rows[0].nombre + ' · ' + fmt2(T.rows[0].tiempo) : 'Nadie le ha ganado al Livo todavía';
 }
-function openRank() { stopTimers(); cur = null; showScreen('rank'); renderRank(); refreshRank(true); $('#r-back').focus(); }
+function openRank(nivel) {
+  stopTimers(); cur = null; RK.nivel = nivel; RK.top = RK.tops[nivel] || null; RK.err = false;
+  $('#r-name').textContent = 'Ranking · ' + RANK_INFO[nivel].nombre;
+  showScreen('rank'); renderRank(); refreshRank(true); $('#r-back').focus();
+}
 async function refreshRank(force) {
   RK.loading = true; renderRank();
   try { await loadTop(force); } catch (e) { RK.err = true; }
@@ -812,9 +815,8 @@ function renderRank() {
   if (APODO) btns.push(['Cambiar apodo', 'alt', () => askApodo(null, RK.nivel)]);
   foot(btns, APODO ? 'Apareces como «' + APODO + '»' : info.sin, '#r-foot');
 }
-$('#r-back').addEventListener('click', () => { showScreen(false); renderList(); });
+$('#r-back').addEventListener('click', () => { renderList(); openChat(RK.nivel); });   // vuelve al chat del nivel
 $('#r-reload').addEventListener('click', () => refreshRank(true));
-$('#rank-btn').addEventListener('click', () => openRank());
 function rankAfter(id) { if (!RK.on || ST.pend[id] == null) return; if (!APODO) askApodo(ST.pend[id], id); else sendScore(id, ST.pend[id]); }
 async function sendScore(nivel, t) {
   const inChat = cur && cur.id === nivel && !$('#scr-chat').hidden;
@@ -826,7 +828,7 @@ async function sendScore(nivel, t) {
     delete ST.pend[nivel]; save();
     txt = r.improved ? (r.prev == null ? '🏆 ¡Entraste al ranking con ' + fmt2(r.best) + '! Vas #' + r.pos + ' de ' + r.total + '.' : '🏆 ¡Nuevo récord personal: ' + fmt2(r.best) + '! Vas #' + r.pos + ' de ' + r.total + '.')
       : '🏆 Tu récord sigue siendo ' + fmt2(r.best) + '. Vas #' + r.pos + ' de ' + r.total + '.';
-    try { await loadTop(true); } catch (e) {}
+    RK.tops[nivel] = null; if (RK.nivel === nivel) try { await loadTop(true); } catch (e) {}
   } catch (e) {
     console.warn('ranking', e);
     txt = '📡 No se pudo subir tu tiempo. Se va a intentar de nuevo la próxima vez que abras el juego.';
@@ -855,12 +857,10 @@ $('#apodo-form').addEventListener('submit', async (e) => {
   APODO = name; try { localStorage.setItem('tironi-apodo', name); } catch (err) {}
   $('#apodo').hidden = true; RK.apodoT = null;
   if (a.t != null) { await sendScore(a.nivel, a.t); return; }
-  try { if (await ready()) { await FB.rename(a.nivel, name); await loadTop(true); } } catch (err) { console.warn('ranking', err); }
+  try { if (await ready()) { await FB.rename(a.nivel, name); RK.nivel = a.nivel; await loadTop(true); } } catch (err) { console.warn('ranking', err); }
   if (!$('#scr-rank').hidden) renderRank(); renderList();
 });
 if (RK.on) {
-  $('#rank-btn').hidden = false;
-  loadTop().catch(() => { RK.err = true; }).then(() => renderList());
   // tiempos que no alcanzaron a subirse la vez pasada
   if (APODO) for (const k of Object.keys(ST.pend)) if (RANK_INFO[k]) sendScore(k, ST.pend[k]);
 }
