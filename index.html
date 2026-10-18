@@ -553,7 +553,7 @@ const byId = (id) => FRIENDS.find((f) => f.id === id);
 
 /* ---------- progreso (solo en este navegador) ---------- */
 // ?reiniciar (o #reiniciar) en la dirección: borra el progreso de este navegador para jugar como la primera vez (el apodo del ranking se mantiene)
-try { const q = new URLSearchParams(location.search); if (q.has('reiniciar') || /reiniciar/.test(location.hash)) { ['tironi-wsp', 'tironi-best', 'tironi-cam1'].forEach((k) => localStorage.removeItem(k)); history.replaceState(null, '', location.pathname); } } catch (e) {}
+try { const q = new URLSearchParams(location.search); if (q.has('reiniciar') || /reiniciar/.test(location.hash)) { ['tironi-wsp', 'tironi-best', 'tironi-cam1', 'xakira-temas'].forEach((k) => localStorage.removeItem(k)); history.replaceState(null, '', location.pathname); } } catch (e) {}
 /* ---------- configuración: volumen de música y efectos (se guarda en este navegador) ---------- */
 let CFG = { music:100, sfx:100 };
 try { const c = JSON.parse(localStorage.getItem('tironi-cfg') || 'null'); if (c && typeof c === 'object') CFG = Object.assign(CFG, c); } catch (e) {}
@@ -806,7 +806,7 @@ $('#cfg-sfx').addEventListener('input', (e) => { CFG.sfx = +e.target.value; $('#
 $('#cfg-sfx').addEventListener('change', () => blip('in'));
 $('#cfg-reset').addEventListener('click', () => { $('#cfg-reset').hidden = true; $('#cfg-confirm').hidden = false; $('#cfg-no').focus(); });
 $('#cfg-no').addEventListener('click', () => { $('#cfg-confirm').hidden = true; $('#cfg-reset').hidden = false; });
-$('#cfg-yes').addEventListener('click', () => { try { ['tironi-wsp', 'tironi-best', 'tironi-cam1'].forEach((k) => localStorage.removeItem(k)); } catch (e) {} location.reload(); });
+$('#cfg-yes').addEventListener('click', () => { try { ['tironi-wsp', 'tironi-best', 'tironi-cam1', 'xakira-temas'].forEach((k) => localStorage.removeItem(k)); } catch (e) {} location.reload(); });
 addEventListener('keydown', (e) => { if (e.code === 'Escape' && !$('#config').hidden) { e.preventDefault(); closeCfg(); } });
 
 /* =========================================================
