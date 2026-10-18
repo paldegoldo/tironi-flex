@@ -508,6 +508,8 @@ const GROUP = { id:'grupo', av:{ img:GRUPO_AV } };
 const byId = (id) => FRIENDS.find((f) => f.id === id);
 
 /* ---------- progreso (solo en este navegador) ---------- */
+// ?reiniciar (o #reiniciar) en la dirección: borra el progreso de este navegador para jugar como la primera vez (el apodo del ranking se mantiene)
+try { const q = new URLSearchParams(location.search); if (q.has('reiniciar') || /reiniciar/.test(location.hash)) { ['tironi-wsp', 'tironi-best', 'tironi-cam1'].forEach((k) => localStorage.removeItem(k)); history.replaceState(null, '', location.pathname); } } catch (e) {}
 let ST = { done:{}, seen:{}, res:{}, groupSeen:0 };
 try { const s = JSON.parse(localStorage.getItem('tironi-wsp') || 'null'); if (s && typeof s === 'object') ST = Object.assign(ST, s); } catch (e) {}
 function save() { try { localStorage.setItem('tironi-wsp', JSON.stringify(ST)); } catch (e) {} }
