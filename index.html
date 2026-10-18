@@ -8,7 +8,7 @@
 <meta property="og:description" content="Ayuda a Tironi a juntar al equipo para la flex. ¿Le ganas al Livo?">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://paldegoldo.github.io/tironi-flex">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%8F%8D%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%272 4 60 60%27%3E%3Ccircle cx=%2732%27 cy=%2734%27 r=%2727%27 fill=%27%23ffd2a8%27/%3E%3Cpath d=%27M27 8c3-5 11-5 12 1-3-2-6-2-8 1-1-2-2-2-4-2z%27 fill=%27%23a86a3a%27/%3E%3Ccircle cx=%2710%27 cy=%2734%27 r=%275%27 fill=%27%23ffc196%27/%3E%3Ccircle cx=%2754%27 cy=%2734%27 r=%275%27 fill=%27%23ffc196%27/%3E%3Cellipse cx=%2722%27 cy=%2731%27 rx=%273.4%27 ry=%274.2%27 fill=%27%232b1a12%27/%3E%3Cellipse cx=%2742%27 cy=%2731%27 rx=%273.4%27 ry=%274.2%27 fill=%27%232b1a12%27/%3E%3Ccircle cx=%2723.2%27 cy=%2729.4%27 r=%271.2%27 fill=%27%23fff%27/%3E%3Ccircle cx=%2743.2%27 cy=%2729.4%27 r=%271.2%27 fill=%27%23fff%27/%3E%3Cellipse cx=%2715%27 cy=%2741%27 rx=%275%27 ry=%273%27 fill=%27%23ff8f8f%27 opacity=%27.6%27/%3E%3Cellipse cx=%2749%27 cy=%2741%27 rx=%275%27 ry=%273%27 fill=%27%23ff8f8f%27 opacity=%27.6%27/%3E%3Cpath d=%27M18 45c0-5 6-7 14-7s14 2 14 7-6 6-14 6-14-1-14-6z%27 fill=%27%234fc3f7%27 stroke=%27%231b6fa8%27 stroke-width=%272%27/%3E%3Ccircle cx=%2732%27 cy=%2745%27 r=%274.2%27 fill=%27%23ffd23a%27 stroke=%27%23b8860b%27 stroke-width=%271.6%27/%3E%3Ccircle cx=%2732%27 cy=%2755%27 r=%276%27 fill=%27none%27 stroke=%27%23ff5fa2%27 stroke-width=%273.4%27/%3E%3C/svg%3E">
 <style>[hidden]{display:none!important}</style>
 <title data-own>Tironi: Falta uno para la flex</title>
 <meta data-own name="claude:viewport-fit-sides" content="cover">
@@ -274,6 +274,8 @@ button{font:inherit;color:inherit}
 .r-tab.on{background:#005c4b;border-color:#00a884;color:#e9edef}
 .r-tab.on small{opacity:1}
 .r-tab:focus-visible{outline:2px solid #00a884;outline-offset:2px}
+
+.citem .pv.fresh{font-style:italic;opacity:.8}
 </style>
 </head>
 <body>
@@ -1652,7 +1654,7 @@ function renderList() {
     const av = document.createElement('span'); av.className = 'av'; avatar(av, o.av);
     const nm = document.createElement('b'); nm.textContent = o.name; if (o.tag) { const t = document.createElement('span'); t.className = 'lvl' + (o.tagOk ? ' ok' : ''); t.textContent = o.tag; nm.appendChild(t); }
     const tm = document.createElement('span'); tm.className = 'tm' + (o.badge ? ' new' : ''); tm.textContent = o.time || '';
-    const pv = document.createElement('span'); pv.className = 'pv'; pv.textContent = o.preview;
+    const pv = document.createElement('span'); pv.className = 'pv' + (o.fresh ? ' fresh' : ''); pv.textContent = o.preview;
     const bd = document.createElement('span'); if (o.badge) { bd.className = 'badge'; bd.textContent = o.badge; }
     b.append(av, nm, tm, pv, bd);
     if (!o.locked) b.addEventListener('click', o.open); else b.disabled = true;
@@ -1663,8 +1665,9 @@ function renderList() {
   for (const f of FRIENDS) {
     const tx = TXT[f.id], r = ST.res[f.id];
     const lines = r ? r.lines : tx.chatIntro;
-    const unread = ST.seen[f.id] ? 0 : tx.chatIntro.filter((l) => l[0] === 'them').length;
-    item({ name:f.name, av:f.av, tag:ST.done[f.id] ? '✓ en la partida' : f.lvl, tagOk:!!ST.done[f.id], preview:lastText(lines), time:unread ? f.time : (r ? 'ahora' : f.time), badge:unread, open:() => openChat(f.id) });
+    // la conversación la empieza Tironi al abrir el chat: antes de eso no hay mensajes nuevos
+    const fresh = !ST.seen[f.id];
+    item({ name:f.name, av:f.av, tag:ST.done[f.id] ? '✓ en la partida' : f.lvl, tagOk:!!ST.done[f.id], preview:fresh ? 'Escríbele pa\' la flex ✍️' : lastText(lines), fresh, time:fresh ? '' : (r ? 'ahora' : f.time), badge:0, open:() => openChat(f.id) });
   }
   if (FULL) for (const f of SOON) item({ name:f.name, av:f.av, tag:'Próximamente', preview:'🔒 ' + f.preview, time:f.time, locked:true });
   $('#list-hint').textContent = 'Toca un chat para jugar ese nivel.';
