@@ -299,6 +299,16 @@ button{font:inherit;color:inherit}
 .in-send{width:44px;height:44px;flex:none;border-radius:50%;background:#00a884;color:#0b141a;display:grid;place-items:center;font-size:18px}
 .in-skip{position:absolute;right:max(20px,env(safe-area-inset-right,0px));bottom:max(20px,env(safe-area-inset-bottom,0px))}
 @media (prefers-reduced-motion:reduce){.in-phone{transition:opacity .4s}}
+
+/* intro → menú: el celular vuela a su lugar y el menú aparece desde lo difuso */
+#menu .side{transition:opacity 1.5s ease,filter 1.8s ease,transform 1.8s ease}
+#menu .side.pre{opacity:0;filter:blur(14px);transform:translateX(-18px)}
+#intro.fly{background-color:transparent;transition:background-color 1.8s ease .15s;pointer-events:none}
+#intro.fly .in-phone{transition:transform 1.9s cubic-bezier(.65,0,.25,1)}
+.in-phone .screen{transition:transform .6s cubic-bezier(.4,0,.2,1),filter .6s ease;background:var(--wa-bg)}
+.in-phone .screen.back{transform:translateX(100%)}
+.in-phone .in-list{transform:translateX(-28%);filter:brightness(.55)}
+.in-phone .in-list.on{transform:none;filter:none}
 </style>
 </head>
 <body>
@@ -2219,9 +2229,33 @@ function introEnd(quick) {
   if (INTRO.done) return; INTRO.done = true; INTRO.T.forEach(clearTimeout); INTRO.T = [];
   try { localStorage.setItem('tironi-intro', '1'); } catch (e) {}
   removeEventListener('keydown', introKey, true);
-  const el = $('#intro'); el.classList.add('bye'); $('#in-phone').classList.add('out'); $('#in-skip').hidden = true;
-  setTimeout(() => { el.hidden = true; el.className = ''; const b = document.querySelector('#chat-list .citem'); if (b) b.focus(); }, quick ? 700 : 1700);
-  musicPlay(quick ? 1.2 : 2.6);
+  $('#in-skip').hidden = true;
+  if (quick) {
+    const el = $('#intro'); el.classList.add('bye'); $('#in-phone').classList.add('out'); document.querySelector('#menu .side').classList.remove('pre');
+    setTimeout(() => { el.hidden = true; el.className = ''; const b = document.querySelector('#chat-list .citem'); if (b) b.focus(); }, 700);
+    musicPlay(1.2); return;
+  }
+  introFly(); musicPlay(2.6);
+}
+// el celular de la intro viaja a su lugar en el menú, sale del chat a la lista de chats, y el resto del menú aparece desde lo difuso
+function introFly() {
+  const el = $('#intro'), ip = $('#in-phone'), mp = $('#phone'), side = document.querySelector('#menu .side');
+  renderList();
+  const chat = ip.querySelector('.screen'), list = $('#scr-list').cloneNode(true);
+  list.removeAttribute('id'); list.hidden = false; list.querySelectorAll('[id]').forEach((e) => e.removeAttribute('id')); list.classList.add('in-list'); ip.insertBefore(list, chat);
+  mp.style.visibility = 'hidden';
+  const a = ip.getBoundingClientRect(), b = mp.getBoundingClientRect();
+  const dx = b.left + b.width / 2 - (a.left + a.width / 2), dy = b.top + b.height / 2 - (a.top + a.height / 2), sc = b.height / Math.max(1, a.height);
+  el.classList.add('fly');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    ip.style.transform = 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) scale(' + sc.toFixed(4) + ')';
+    setTimeout(() => { chat.classList.add('back'); list.classList.add('on'); blip('in'); }, 450);
+    setTimeout(() => side.classList.remove('pre'), 700);
+  }));
+  setTimeout(() => {
+    mp.style.visibility = ''; el.hidden = true; el.className = ''; ip.style.transform = ''; ip.className = 'phone in-phone'; list.remove(); chat.classList.remove('back');
+    const c = document.querySelector('#chat-list .citem'); if (c) c.focus();
+  }, 2600);
 }
 function introKey(e) {
   if (INTRO.done) return;
@@ -2234,6 +2268,7 @@ function introRun() {
   avatar($('#in-av'), GROUP.av); $('#in-name').textContent = TXT.menu.grupo.nombre; $('#in-status').textContent = groupStatus();
   $('#in-msgs').innerHTML = '<div class="daysep">HOY</div>'; $('#in-input').textContent = ''; $('#in-clock').textContent = hm();
   addEventListener('keydown', introKey, true);
+  document.querySelector('#menu .side').classList.add('pre');
   $('#in-start').addEventListener('click', introGo); $('#in-skip').addEventListener('click', () => introEnd(true));
   setTimeout(() => $('#in-start').focus(), 50);
 }
