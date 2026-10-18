@@ -2248,17 +2248,17 @@ function introFly() {
   const A = [], an = (node, kf, o) => { if (node && node.animate) A.push(node.animate(kf, Object.assign({ fill:'both' }, o))); };
   const far = Math.abs(dx) > 30 || Math.abs(dy) > 30;
   an(ip, far ? [{ transform:'none' }, { transform:'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) scale(' + sc.toFixed(4) + ')' }]
-             : [{ transform:'none' }, { transform:'scale(.96)', offset:0.45 }, { transform:'none' }], { duration:2400, easing:'cubic-bezier(.65,0,.25,1)' });
-  an(el, [{ backgroundColor:'rgba(0,0,0,1)' }, { backgroundColor:'rgba(0,0,0,0)' }], { duration:2300, delay:150, easing:'ease' });
-  an(chat, [{ transform:'translateX(0)' }, { transform:'translateX(100%)' }], { duration:650, delay:500, easing:'cubic-bezier(.4,0,.2,1)' });
-  an(list, [{ transform:'translateX(-28%)', filter:'brightness(.55)' }, { transform:'translateX(0)', filter:'brightness(1)' }], { duration:650, delay:500, easing:'cubic-bezier(.4,0,.2,1)' });
-  if (side) { side.classList.remove('pre'); an(side, [{ opacity:0, filter:'blur(14px)', transform:'translateX(-18px)' }, { opacity:1, filter:'blur(0px)', transform:'translateX(0)' }], { duration:2100, delay:900, easing:'ease' }); }
-  setTimeout(() => blip('in'), 520);
+             : [{ transform:'none' }, { transform:'scale(.96)', offset:0.45 }, { transform:'none' }], { duration:7000, easing:'cubic-bezier(.45,0,.25,1)' });
+  an(el, [{ backgroundColor:'rgba(0,0,0,1)' }, { backgroundColor:'rgba(0,0,0,0)' }], { duration:6000, delay:300, easing:'ease-in-out' });
+  an(chat, [{ transform:'translateX(0)' }, { transform:'translateX(100%)' }], { duration:650, delay:7050, easing:'cubic-bezier(.4,0,.2,1)' });
+  an(list, [{ transform:'translateX(-28%)', filter:'brightness(.55)' }, { transform:'translateX(0)', filter:'brightness(1)' }], { duration:650, delay:7050, easing:'cubic-bezier(.4,0,.2,1)' });
+  if (side) { side.classList.remove('pre'); an(side, [{ opacity:0, filter:'blur(14px)', transform:'translateX(-18px)' }, { opacity:1, filter:'blur(0px)', transform:'translateX(0)' }], { duration:4600, delay:2200, easing:'ease-in-out' }); }
+  setTimeout(() => blip('in'), 7080);
   setTimeout(() => {
     mp.style.visibility = ''; el.hidden = true; el.className = ''; el.style.pointerEvents = ''; ip.className = 'phone in-phone'; list.remove();
     A.forEach((x) => { try { x.cancel(); } catch (e) {} });
     const c = document.querySelector('#chat-list .citem'); if (c) c.focus();
-  }, 3100);
+  }, 7900);
 }
 function introKey(e) {
   if (INTRO.done) return;
