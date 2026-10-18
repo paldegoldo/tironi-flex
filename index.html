@@ -238,7 +238,7 @@ button{font:inherit;color:inherit}
 .cfg-row label,.cfg-row .lbl{font-weight:700;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .cfg-row input[type=range]{width:100%;accent-color:var(--bencina);height:24px;cursor:pointer}
 .cfg-row output{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
-#cfg-fs-row .btn{grid-column:2 / 4;justify-self:start}
+#cfg-fs-row .btn,#cfg-intro{grid-column:2 / 4;justify-self:start}
 .cfg-reset{border-top:2px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 .cfg-reset p{font-size:14px!important}
 .btn.danger{background:var(--rojo);color:#fff;box-shadow:5px 5px 0 #6a1a14}
@@ -380,6 +380,7 @@ button{font:inherit;color:inherit}
     <h2 id="cfg-title">Configuración</h2>
     <div class="cfg-row"><label for="cfg-mus">Música</label><input type="range" id="cfg-mus" min="0" max="100" step="5"><output id="cfg-mus-v" for="cfg-mus">100%</output></div>
     <div class="cfg-row"><label for="cfg-sfx">Efectos</label><input type="range" id="cfg-sfx" min="0" max="100" step="5"><output id="cfg-sfx-v" for="cfg-sfx">100%</output></div>
+    <div class="cfg-row"><span class="lbl">Intro</span><button class="btn ghost" type="button" id="cfg-intro">▶ Ver la intro de nuevo</button></div>
     <div class="cfg-row" id="cfg-fs-row"><span class="lbl">Pantalla</span><button class="btn ghost" type="button" id="cfg-fs">⛶ Pantalla completa</button></div>
     <div class="cfg-reset">
       <p>Borra tu progreso para jugar todo como la primera vez. Tu apodo y tus tiempos del ranking no se borran.</p>
@@ -2230,11 +2231,8 @@ function introEnd(quick) {
   try { localStorage.setItem('tironi-intro', '1'); } catch (e) {}
   removeEventListener('keydown', introKey, true);
   $('#in-skip').hidden = true;
-  if (quick) {
-    const el = $('#intro'); el.classList.add('bye'); $('#in-phone').classList.add('out'); document.querySelector('#menu .side').classList.remove('pre');
-    setTimeout(() => { el.hidden = true; el.className = ''; const b = document.querySelector('#chat-list .citem'); if (b) b.focus(); }, 700);
-    musicPlay(1.2); return;
-  }
+  // aunque se salte, el celular igual viaja a su lugar en el menú
+  const ip = $('#in-phone'); if (quick) { ip.style.transition = 'none'; ip.classList.add('show'); void ip.offsetWidth; ip.style.transition = ''; $('#in-start').hidden = true; }
   introFly(); musicPlay(2.6);
 }
 // el celular de la intro viaja a su lugar en el menú, sale del chat a la lista de chats, y el resto del menú aparece desde lo difuso
@@ -2262,6 +2260,12 @@ function introKey(e) {
   if (!$('#in-start').hidden) { if (['Enter', 'Space', 'NumpadEnter'].includes(e.code)) { e.preventDefault(); introGo(); } return; }
   e.stopPropagation();
   if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); introEnd(true); }
+}
+// ver la intro otra vez (desde Configuración)
+function introReplay() {
+  closeCfg(); stopTimers(); cur = null; showScreen(false); renderList(); musicStop(0.8); INTRO.T.forEach(clearTimeout); INTRO.T = []; INTRO.done = false;
+  const ip = $('#in-phone'); ip.className = 'phone in-phone'; ip.style.transform = ''; $('#in-start').hidden = false; $('#in-skip').hidden = true;
+  introRun();
 }
 function introRun() {
   const el = $('#intro'); el.hidden = false; el.className = '';
@@ -2313,6 +2317,7 @@ function tick() {
 avatar($('#me-av'), { img:TIRONI_AV });
 renderList();
 if (introNeeded()) introRun(); else musicPlay();
+$('#cfg-intro').addEventListener('click', introReplay);
 })();
 </script>
 </body>
