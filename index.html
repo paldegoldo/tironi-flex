@@ -2224,7 +2224,7 @@ function musicVol() { if (MUS.g && AC) MUS.g.gain.setTargetAtTime(musV(), AC.cur
 /* =========================================================
    INTRO (solo la primera vez): pantalla negra, aparece el WhatsApp de Tironi en el grupo y manda los mensajes
    ========================================================= */
-const INTRO = { T:[], done:false };
+const INTRO = { T:[], done:false, started:false };
 function introNeeded() { try { if (localStorage.getItem('tironi-intro')) return false; } catch (e) { return false; } return !Object.keys(ST.seen || {}).length && !Object.keys(ST.done || {}).length; }
 function introEnd(quick) {
   if (INTRO.done) return; INTRO.done = true; INTRO.T.forEach(clearTimeout); INTRO.T = [];
@@ -2252,7 +2252,7 @@ function introFly() {
   an(el, [{ backgroundColor:'rgba(0,0,0,1)' }, { backgroundColor:'rgba(0,0,0,0)' }], { duration:6000, delay:300, easing:'ease-in-out' });
   an(chat, [{ transform:'translateX(0)' }, { transform:'translateX(100%)' }], { duration:650, delay:7050, easing:'cubic-bezier(.4,0,.2,1)' });
   an(list, [{ transform:'translateX(-28%)', filter:'brightness(.55)' }, { transform:'translateX(0)', filter:'brightness(1)' }], { duration:650, delay:7050, easing:'cubic-bezier(.4,0,.2,1)' });
-  if (side) { side.classList.remove('pre'); an(side, [{ opacity:0, filter:'blur(14px)', transform:'translateX(-18px)' }, { opacity:1, filter:'blur(0px)', transform:'translateX(0)' }], { duration:4600, delay:2200, easing:'ease-in-out' }); }
+  if (side) { side.classList.remove('pre'); an(side, [{ opacity:0, filter:'blur(14px)', transform:'translateX(-18px)' }, { opacity:1, filter:'blur(0px)', transform:'translateX(0)' }], { duration:4200, delay:150, easing:'ease-out' }); }
   setTimeout(() => blip('in'), 7080);
   setTimeout(() => {
     mp.style.visibility = ''; el.hidden = true; el.className = ''; el.style.pointerEvents = ''; ip.className = 'phone in-phone'; list.remove();
@@ -2268,7 +2268,7 @@ function introKey(e) {
 }
 // ver la intro otra vez (desde Configuración)
 function introReplay() {
-  closeCfg(); stopTimers(); cur = null; showScreen(false); renderList(); musicStop(0.8); INTRO.T.forEach(clearTimeout); INTRO.T = []; INTRO.done = false;
+  closeCfg(); stopTimers(); cur = null; showScreen(false); renderList(); musicStop(0.8); INTRO.T.forEach(clearTimeout); INTRO.T = []; INTRO.done = false; INTRO.started = false;
   const ip = $('#in-phone'); ip.className = 'phone in-phone'; ip.style.transform = ''; $('#in-start').hidden = false; $('#in-skip').hidden = true;
   introRun();
 }
@@ -2281,9 +2281,14 @@ function introRun() {
   $('#in-start').addEventListener('click', introGo); $('#in-skip').addEventListener('click', () => introEnd(true));
   setTimeout(() => $('#in-start').focus(), 50);
 }
+// la canción del menú parte al tocar "empezar" y sus baterías (seg. 28,65) caen justo cuando el celular empieza a viajar al menú
+const DRUMS = 28.65;
 function introGo() {
-  if ($('#in-start').hidden) return; $('#in-start').hidden = true; unlock(); musicLoad();
-  const at = (ms, fn) => INTRO.T.push(setTimeout(fn, ms));
+  if ($('#in-start').hidden) return; $('#in-start').hidden = true; unlock();
+  const go = () => { if (!INTRO.done && !INTRO.started) { INTRO.started = true; introTimeline(); } };
+  musicLoad().then(go, go); setTimeout(go, 2500);   // si la canción no carga, la intro parte igual
+}
+function introTimeline() {
   const box = $('#in-msgs'), inp = $('#in-input'), stat = $('#in-status');
   const bubble = (who, text, from) => {
     const m = document.createElement('div'); m.className = 'msg ' + who;
@@ -2292,24 +2297,31 @@ function introGo() {
     if (who !== 'sys') { const t = document.createElement('time'); t.textContent = hm() + (who === 'me' ? ' ✓✓' : ''); m.appendChild(t); }
     box.appendChild(m); box.scrollTop = box.scrollHeight;
   };
+  // se arma la secuencia: esperas (algunas "estirables") y acciones
+  const seq = [], W = (ms, flex) => seq.push([ms, flex || 0, null]), Do = (fn) => seq.push([0, 0, fn]);
   const lines = clone(TXT.menu.grupoChat || []), mine = lines.filter((l) => l[0] === 'me').length, names = FRIENDS.map((f) => f.name).concat(SOON.map((f) => f.name));
-  let t = 900; at(t, () => $('#in-phone').classList.add('show')); t += 2600;
-  at(t, () => { $('#in-skip').hidden = false; });
+  W(900, 3); Do(() => $('#in-phone').classList.add('show')); W(2600, 1.5);
+  Do(() => { $('#in-skip').hidden = false; });
   let meN = 0;
   lines.forEach(([who, text, from]) => {
     if (who === 'me') {
       meN++;
       // antes del último mensaje: alguien empieza a escribir… y no manda nada
-      if (meN === mine && mine > 1 && names.length) { const who2 = names[Math.floor(Math.random() * names.length)]; at(t, () => { stat.textContent = who2 + ' está escribiendo…'; }); t += 2300; at(t, () => { stat.textContent = groupStatus(); }); t += 1300; }
+      if (meN === mine && mine > 1 && names.length) { const who2 = names[Math.floor(Math.random() * names.length)]; Do(() => { stat.textContent = who2 + ' está escribiendo…'; }); W(2300, 1); Do(() => { stat.textContent = groupStatus(); }); W(1300, 1); }
       const chars = Array.from(String(text));
-      chars.forEach((c, i) => { at(t, () => { inp.textContent = chars.slice(0, i + 1).join(''); inp.classList.add('on'); if (c !== ' ' && i % 2 === 0) tick(); }); t += 45 + Math.random() * 55 + (/[.,?!]/.test(c) ? 140 : 0); });
-      t += 380; at(t, () => { inp.textContent = ''; inp.classList.remove('on'); bubble('me', text); blip('out'); }); t += 1500;
+      chars.forEach((c, i) => { Do(() => { inp.textContent = chars.slice(0, i + 1).join(''); inp.classList.add('on'); if (c !== ' ' && i % 2 === 0) tick(); }); W(45 + Math.random() * 55 + (/[.,?!]/.test(c) ? 140 : 0)); });
+      W(380); Do(() => { inp.textContent = ''; inp.classList.remove('on'); bubble('me', text); blip('out'); }); W(1500, 1);
     } else if (who === 'them') {
-      at(t, () => { stat.textContent = (from || 'Alguien') + ' está escribiendo…'; }); t += Math.min(1600, 500 + String(text).length * 18);
-      at(t, () => { stat.textContent = groupStatus(); bubble('them', text, from); blip('in'); }); t += 1300;
-    } else { at(t, () => bubble('sys', text)); t += 1100; }
+      Do(() => { stat.textContent = (from || 'Alguien') + ' está escribiendo…'; }); W(Math.min(1600, 500 + String(text).length * 18), 1);
+      Do(() => { stat.textContent = groupStatus(); bubble('them', text, from); blip('in'); }); W(1300, 1);
+    } else { Do(() => bubble('sys', text)); W(1100, 1); }
   });
-  t += 1200; at(t, () => introEnd(false));
+  W(1200, 1); Do(() => introEnd(false));
+  // si la intro dura menos que lo que tardan las baterías, se estiran las pausas; si dura más, la canción parte un poco después
+  const total = seq.reduce((a, x) => a + x[0], 0), flexW = seq.reduce((a, x) => a + x[0] * x[1], 0), slack = Math.max(0, DRUMS * 1000 - total);
+  let t = 0; for (const [ms, fl, fn] of seq) { if (fn) INTRO.T.push(setTimeout(fn, t)); else t += ms + (flexW ? slack * ms * fl / flexW : 0); }
+  const late = Math.max(0, total - DRUMS * 1000);
+  MUS.off = 0; if (late) INTRO.T.push(setTimeout(() => musicPlay(0.6), late)); else musicPlay(0.6);
 }
 // tecleo suavecito del celular
 function tick() {
