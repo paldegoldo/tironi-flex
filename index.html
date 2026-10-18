@@ -2240,20 +2240,25 @@ function introFly() {
   const el = $('#intro'), ip = $('#in-phone'), mp = $('#phone'), side = document.querySelector('#menu .side');
   renderList();
   const chat = ip.querySelector('.screen'), list = $('#scr-list').cloneNode(true);
-  list.removeAttribute('id'); list.hidden = false; list.querySelectorAll('[id]').forEach((e) => e.removeAttribute('id')); list.classList.add('in-list'); ip.insertBefore(list, chat);
-  mp.style.visibility = 'hidden';
+  list.removeAttribute('id'); list.hidden = false; list.querySelectorAll('[id]').forEach((e) => e.removeAttribute('id')); list.classList.add('in-list', 'on'); ip.insertBefore(list, chat);
+  mp.style.visibility = 'hidden'; el.style.pointerEvents = 'none';
   const a = ip.getBoundingClientRect(), b = mp.getBoundingClientRect();
   const dx = b.left + b.width / 2 - (a.left + a.width / 2), dy = b.top + b.height / 2 - (a.top + a.height / 2), sc = b.height / Math.max(1, a.height);
-  el.classList.add('fly');
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    ip.style.transform = 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) scale(' + sc.toFixed(4) + ')';
-    setTimeout(() => { chat.classList.add('back'); list.classList.add('on'); blip('in'); }, 450);
-    setTimeout(() => side.classList.remove('pre'), 700);
-  }));
+  // animaciones hechas con JavaScript (Web Animations): funcionan aunque el sistema tenga "reducir movimiento"
+  const A = [], an = (node, kf, o) => { if (node && node.animate) A.push(node.animate(kf, Object.assign({ fill:'both' }, o))); };
+  const far = Math.abs(dx) > 30 || Math.abs(dy) > 30;
+  an(ip, far ? [{ transform:'none' }, { transform:'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) scale(' + sc.toFixed(4) + ')' }]
+             : [{ transform:'none' }, { transform:'scale(.96)', offset:0.45 }, { transform:'none' }], { duration:2400, easing:'cubic-bezier(.65,0,.25,1)' });
+  an(el, [{ backgroundColor:'rgba(0,0,0,1)' }, { backgroundColor:'rgba(0,0,0,0)' }], { duration:2300, delay:150, easing:'ease' });
+  an(chat, [{ transform:'translateX(0)' }, { transform:'translateX(100%)' }], { duration:650, delay:500, easing:'cubic-bezier(.4,0,.2,1)' });
+  an(list, [{ transform:'translateX(-28%)', filter:'brightness(.55)' }, { transform:'translateX(0)', filter:'brightness(1)' }], { duration:650, delay:500, easing:'cubic-bezier(.4,0,.2,1)' });
+  if (side) { side.classList.remove('pre'); an(side, [{ opacity:0, filter:'blur(14px)', transform:'translateX(-18px)' }, { opacity:1, filter:'blur(0px)', transform:'translateX(0)' }], { duration:2100, delay:900, easing:'ease' }); }
+  setTimeout(() => blip('in'), 520);
   setTimeout(() => {
-    mp.style.visibility = ''; el.hidden = true; el.className = ''; ip.style.transform = ''; ip.className = 'phone in-phone'; list.remove(); chat.classList.remove('back');
+    mp.style.visibility = ''; el.hidden = true; el.className = ''; el.style.pointerEvents = ''; ip.className = 'phone in-phone'; list.remove();
+    A.forEach((x) => { try { x.cancel(); } catch (e) {} });
     const c = document.querySelector('#chat-list .citem'); if (c) c.focus();
-  }, 2600);
+  }, 3100);
 }
 function introKey(e) {
   if (INTRO.done) return;
