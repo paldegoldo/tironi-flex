@@ -205,19 +205,29 @@ button{font:inherit;color:inherit}
 .apodo .apodo-err{color:var(--rojo);font-size:13px;min-height:1em}
 .apodo-btns{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 
-/* contador de amigos reclutados (al ganar un nivel) */
-#recruit{position:fixed;inset:0;z-index:32;display:grid;place-items:center;pointer-events:none;perspective:900px}
-#recruit .rc{font-family:var(--f-display);font-size:clamp(96px,17vw,220px);line-height:1;color:#f4eddf;display:flex;align-items:baseline;opacity:0;transform:scale(.9);filter:blur(6px);transition:opacity 1.3s ease,transform 1.6s cubic-bezier(.2,.8,.2,1),filter 1.3s ease}
+/* contador de amigos reclutados (al ganar un nivel): solemne a niveles ridículos */
+#recruit{position:fixed;inset:0;z-index:32;display:grid;place-items:center;perspective:1100px;cursor:default;overflow:hidden}
+#recruit::before{content:"";position:absolute;left:50%;top:50%;width:200vmax;height:200vmax;transform:translate(-50%,-50%) rotate(0deg);opacity:0;
+  background:repeating-conic-gradient(from 0deg,rgba(255,194,58,.13) 0deg 6deg,transparent 6deg 18deg);transition:opacity 1.2s ease;-webkit-mask:radial-gradient(circle,#000 0,transparent 55%);mask:radial-gradient(circle,#000 0,transparent 55%)}
+#recruit::after{content:"";position:absolute;left:50%;top:50%;width:70vmin;height:70vmin;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,240,200,.16),transparent 65%);opacity:0;transition:opacity 2.4s ease}
+#recruit.in::after{opacity:1}
+#recruit.rays::before{opacity:1;animation:rcRays 14s linear infinite}
+#recruit.rays::after{background:radial-gradient(circle,rgba(255,194,58,.35),transparent 65%);transition:opacity .2s}
+@keyframes rcRays{to{transform:translate(-50%,-50%) rotate(360deg)}}
+#recruit .rc{position:relative;z-index:1;font-family:var(--f-display);font-size:clamp(110px,19vw,250px);line-height:1;color:#f4eddf;display:flex;align-items:baseline;opacity:0;transform:scale(1.12);filter:blur(10px);letter-spacing:.02em;
+  transition:opacity 2.4s ease,transform 3.2s cubic-bezier(.2,.8,.2,1),filter 2.4s ease}
 #recruit.in .rc{opacity:1;transform:none;filter:none}
-#recruit.out .rc{opacity:0;transition:opacity .6s ease}
+#recruit.out .rc{opacity:0;transform:scale(.96);transition:opacity .9s ease,transform .9s ease}
+#recruit.out::before,#recruit.out::after{opacity:0;transition:opacity .9s}
 #recruit .rc-n{display:inline-block;transform-origin:50% 52%;backface-visibility:hidden}
 #recruit .rc-of{color:#b9aecb}
-#recruit .rc-n.flipA{animation:rcOut .28s ease-in forwards}
-#recruit .rc-n.flipB{color:var(--bencina);text-shadow:0 0 40px rgba(255,194,58,.55),6px 6px 0 var(--morado);animation:rcIn .55s cubic-bezier(.2,1.5,.4,1) forwards}
+#recruit .rc-n.flipA{animation:rcOut 1.4s cubic-bezier(.55,0,.85,.35) forwards}
+#recruit .rc-n.flipB{color:var(--bencina);text-shadow:0 0 50px rgba(255,194,58,.7),7px 7px 0 var(--morado);animation:rcIn 2.1s cubic-bezier(.15,.9,.25,1.12) forwards}
+#recruit.rays .rc{animation:rcThump .5s ease-out}
 @keyframes rcOut{to{transform:rotateX(90deg)}}
 @keyframes rcIn{from{transform:rotateX(-90deg)}to{transform:rotateX(0)}}
-@media (prefers-reduced-motion:reduce){#recruit .rc-n.flipA,#recruit .rc-n.flipB{animation:none}}
-
+@keyframes rcThump{0%{transform:scale(1)}25%{transform:scale(1.06)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){#recruit .rc-n.flipA,#recruit .rc-n.flipB,#recruit.rays::before,#recruit.rays .rc{animation:none}}
 /* configuración */
 .side-btns{display:flex;gap:10px;flex-wrap:wrap}
 .wa-right{display:flex;align-items:center;gap:4px}
@@ -678,7 +688,7 @@ $('#back').addEventListener('click', () => { stopTimers(); cur = null; showScree
 addEventListener('keydown', (e) => { if (e.code !== 'Escape' || !$('#editor').hidden || !$('#stage').hidden) return; if (!$('#apodo').hidden) { closeApodo(); return; } if (!$('#scr-chat').hidden) $('#back').click(); else if (!$('#scr-rank').hidden) $('#r-back').click(); });
 
 /* ---------- niveles (cada uno corre en su propio marco, a pantalla completa) ---------- */
-const SNDS = { 'mirador.mp3':'snd-mirador', 'canticos.mp3':'snd-canticos', 'gol.mp3':'snd-gol', 'livo.mp3':'snd-livo' }, blobs = {};
+const SNDS = { 'mirador.mp3':'snd-mirador', 'sarinha.mp3':'snd-sarinha', 'sqp.mp3':'snd-sqp', 'funkvr.mp3':'snd-funkvr', 'canticos.mp3':'snd-canticos', 'gol.mp3':'snd-gol', 'livo.mp3':'snd-livo' }, blobs = {};
 function blobFor(name) {
   const k = SNDS[String(name).split('/').pop().split('?')[0]]; if (!k) return null;
   if (!blobs[k]) { const b64 = document.getElementById(k).textContent.trim(), bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); blobs[k] = new Blob([u], { type:'audio/mpeg' }); }
@@ -703,17 +713,57 @@ function launch(id) {
 }
 // pantalla negra con el contador de amigos reclutados: el número gira y sube (0/6 → 1/6)
 const TOTAL_AMIGOS = 6;
-function chime() { const ctx = AC; if (!ctx) return; const t = ctx.currentTime; [523, 659, 784, 1047].forEach((hz, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'triangle'; o.frequency.value = hz; g.gain.setValueAtTime(0.0001, t + i * 0.09); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.09 * SFXV()), t + i * 0.09 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.09 + 0.9); o.connect(g); g.connect(ctx.destination); o.start(t + i * 0.09); o.stop(t + i * 0.09 + 1); }); }
-function whoosh() { const ctx = AC; if (!ctx) return; const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(300, t); o.frequency.exponentialRampToValueAtTime(900, t + 0.25); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.05 * SFXV()), t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3); o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.32); }
+// sonido "anuncio de conferencia": zumbido grave, cuerno vikingo (trombón) y timbal, con reverberación
+function reverb(ctx) {
+  if (reverb.n && reverb.n.context === ctx) return reverb.n;
+  const len = ctx.sampleRate * 3.2, ir = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6); }
+  const cv = ctx.createConvolver(); cv.buffer = ir; const wet = ctx.createGain(); wet.gain.value = 0.45; cv.connect(wet); wet.connect(ctx.destination); reverb.n = cv; return cv;
+}
+function drone() {
+  const ctx = AC; if (!ctx || SFXV() <= 0) return null; const t = ctx.currentTime, out = ctx.createGain(), lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.setValueAtTime(110, t); lp.frequency.linearRampToValueAtTime(320, t + 3.6);
+  out.gain.setValueAtTime(0.0001, t); out.gain.exponentialRampToValueAtTime(0.06 * SFXV(), t + 3.4);
+  const os = [36.71, 36.9, 55].map((f) => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.connect(lp); o.start(t); return o; });
+  lp.connect(out); out.connect(ctx.destination); out.connect(reverb(ctx));
+  return { stop(at) { const k = ctx.currentTime + (at || 0); out.gain.cancelScheduledValues(k); out.gain.setTargetAtTime(0.0001, k, 0.08); os.forEach((o) => o.stop(k + 0.6)); } };
+}
+function horn() {
+  const ctx = AC; if (!ctx || SFXV() <= 0) return; const t = ctx.currentTime + 0.02, V = SFXV(), rv = reverb(ctx);
+  const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(ctx.destination); bus.connect(rv);
+  // cuerno: acorde de quinta bien grave, entra un poco desafinado y sube (como un trombón que "despierta")
+  [[36.71, 0.55], [73.42, 1], [110, 0.7], [146.83, 0.35]].forEach(([f, a]) => {
+    for (const det of [-5, 4]) {
+      const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+      o.type = 'sawtooth'; o2.type = 'square'; o.detune.value = det; o2.detune.value = det - 1200;
+      o.frequency.setValueAtTime(f * 0.94, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.32); o2.frequency.setValueAtTime(f * 0.94, t); o2.frequency.exponentialRampToValueAtTime(f, t + 0.32);
+      lfo.frequency.value = 5.1; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * 0.006, t + 1.2); lfo.connect(lg); lg.connect(o.frequency);
+      lp.type = 'lowpass'; lp.Q.value = 2.5; lp.frequency.setValueAtTime(160, t); lp.frequency.exponentialRampToValueAtTime(1500, t + 0.3); lp.frequency.exponentialRampToValueAtTime(820, t + 1.1); lp.frequency.setValueAtTime(820, t + 2.6); lp.frequency.exponentialRampToValueAtTime(200, t + 4.0);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05 * a * V, t + 0.2); g.gain.setValueAtTime(0.05 * a * V, t + 2.6); g.gain.exponentialRampToValueAtTime(0.0001, t + 4.1);
+      o.connect(lp); o2.connect(lp); lp.connect(g); g.connect(bus);
+      [o, o2, lfo].forEach((x) => { x.start(t); x.stop(t + 4.3); });
+    }
+  });
+  // timbal
+  const b = ctx.createOscillator(), bg = ctx.createGain(); b.type = 'sine'; b.frequency.setValueAtTime(95, t); b.frequency.exponentialRampToValueAtTime(42, t + 0.5);
+  bg.gain.setValueAtTime(0.0001, t); bg.gain.exponentialRampToValueAtTime(0.55 * V, t + 0.012); bg.gain.exponentialRampToValueAtTime(0.0001, t + 2.2); b.connect(bg); bg.connect(bus); b.start(t); b.stop(t + 2.3);
+  const nb = ctx.createBuffer(1, ctx.sampleRate * 0.6, ctx.sampleRate), nd = nb.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  const ns = ctx.createBufferSource(), nf = ctx.createBiquadFilter(), ng = ctx.createGain(); ns.buffer = nb; nf.type = 'lowpass'; nf.frequency.value = 420; ng.gain.setValueAtTime(0.35 * V, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.55); ns.connect(nf); nf.connect(ng); ng.connect(bus); ns.start(t);
+}
 function recruitAnim(from, to, cb) {
   const el = $('#recruit'), n = $('#rc-n'); $('#rc-of').textContent = '/' + TOTAL_AMIGOS;
   n.textContent = String(from); n.className = 'rc-n'; el.className = ''; el.hidden = false;
-  const black = setInterval(() => fade(true), 100);
+  const black = setInterval(() => fade(true), 100), T = [];
+  let dr = null, done = false;
+  const finish = () => { if (done) return; done = true; T.forEach(clearTimeout); clearInterval(black); if (dr) dr.stop(); el.hidden = true; el.className = ''; removeEventListener('keydown', skip); el.removeEventListener('click', skip); cb(); };
+  const skip = (e) => { if (e.type === 'keydown' && !['Enter', 'Space', 'Escape'].includes(e.code)) return; el.classList.add('out'); T.forEach(clearTimeout); if (dr) dr.stop(); T.length = 0; T.push(setTimeout(finish, 700)); };
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('in')));
-  setTimeout(() => { n.classList.add('flipA'); whoosh(); }, 1900);
-  setTimeout(() => { n.textContent = String(to); n.className = 'rc-n flipB'; chime(); }, 2180);
-  setTimeout(() => el.classList.add('out'), 4300);
-  setTimeout(() => { clearInterval(black); el.hidden = true; el.className = ''; cb(); }, 5000);
+  T.push(setTimeout(() => { dr = drone(); }, 500));
+  T.push(setTimeout(() => n.classList.add('flipA'), 3400));                                    // gira lento… lento…
+  T.push(setTimeout(() => { n.textContent = String(to); n.className = 'rc-n flipB'; el.classList.add('rays'); if (dr) dr.stop(0.05); horn(); }, 4800));   // ¡BWAAAAM!
+  T.push(setTimeout(() => el.classList.add('out'), 9000));
+  T.push(setTimeout(finish, 10000));
+  setTimeout(() => { if (!done) { addEventListener('keydown', skip); el.addEventListener('click', skip); } }, 1200);
 }
 function closeLevel(id, result) {
   if (!frame) return; fade(true);
