@@ -2328,7 +2328,7 @@ function adminRender(err) {
       if (!on && !bt.dataset.sure) { bt.dataset.sure = '1'; bt.textContent = '¿Seguro? Aprieta otra vez'; return; }
       bt.disabled = true; bt.textContent = 'Guardando…';
       try { if (!(await ready())) throw new Error('sin conexión'); const nl = on ? PUB.filter((x) => x !== id) : PUB.concat([id]); await FB.setPub(nl); applyPub(nl); $('#ad-msg').textContent = on ? 'Listo: escondido otra vez.' : '¡Publicado! Ya les aparece a todos al abrir la página.'; }
-      catch (e) { console.warn('publicar', e); $('#ad-msg').textContent = 'No se pudo guardar. ¿Ya pegaste las reglas con tu código en Firebase?'; adminRender(); }
+      catch (e) { console.warn('publicar', e); adminRender(); $('#ad-msg').textContent = 'No se pudo guardar (' + String((e && (e.code || e.message)) || e).slice(0, 80) + '). ¿Ya pegaste las reglas con tu código en Firebase?'; }
     });
     row.append(nm, st, bt); list.appendChild(row);
   }
