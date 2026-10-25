@@ -1725,7 +1725,7 @@ const LIVO_AV = "url(\"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA
 /* ---------- textos: los del WhatsApp y los de cada nivel ---------- */
 const DEFAULTS = {
   menu:{
-    grupo:{ nombre:'Partida LoL 🎮', falta:'Falta uno… ya veremos quién 👀', completo:'¡Equipo completo! 🎮 A jugar.' },
+    grupo:{ nombre:'Partida LoL 🎮', falta:'Falta uno… ya veremos quién 👀', completo:'¡Equipo completo! 🎮 A jugar.', bloqueado:'Primero convence a {nombre}' },
     grupoChat:[['me', 'cabros, falta gente pa la partida'], ['me', '¿quién se conecta?'], ['me', 'ya, les voy a escribir uno por uno']],
   },
   nivel1:{"chatIntro": [["me", "Livooo wena"], ["me", "oe falta uno pa la partida, ¿te tinca un lolcito?"], ["them", "wena tironi"], ["them", "no puedo, estoy grabando contenido pa los seguidores"], ["them", "pero hagamos un trato"], ["them", "si me ganai una carrera en moto me conecto"], ["them", "partimos en la bencina, Costanera, subimos el San Cristóbal, bajamos al Nacional y de vuelta a la bencina. 2 vueltas"], ["them", "y si pierdes sales en mi reel jajaja"], ["me", "dale. déjame prenderme uno primero"], ["sys", "Recoge los pitos de la pista y fúmalos con ESPACIO para tener turbo. Si fumas muchos seguidos, te da la pálida."]], "cineInicio": {"lugar": "Servicentro 24 hrs", "hora": "Santiago · 23:47", "livo": "¡Ya, estamos grabando! Saluden, cabros.", "tironi": "…ya. Ahora sí.", "pano1": "Costanera Center", "pano1sub": "Providencia", "pano2": "Virgen del San Cristóbal", "pano2sub": "Cerro San Cristóbal", "pano3": "Estadio Nacional", "pano3sub": "Ñuñoa", "pre1": "Ya po, Tironi. Partimos en la COPEC y nos vamos a fondo por la Costanera.", "pre2": "Fácil. Esa la hago con los ojos cerrados.", "pre3": "Después subimos el San Cristóbal, bajamos al Nacional y de vuelta. Dos vueltas.", "pre4": "Y si te gano, te conectai a la flex. Trato es trato."}, "carrera": {"reel": "REC · grabando reel"}, "cineFinal": {"tironi": "¡TOMAAA! ¡Te gané, Livo!", "livo": "Gracias, Tironi. Esto es buen contenido. Ahora sí, caigo a la Grieta.", "usuario": "livocl", "descripcion": "el Tironi me ganó volao 💨🏍️ igual sale en el reel jajaja", "hashtags": "#motos #santiago #r3 #yamaha", "likes": "12,4 mil", "comentarios": "842"}, "chatWin": [["them", "ya lo subí, va a reventar"], ["them", "me conecto en 10"], ["sys", "Livo se unió al grupo «Partida LoL»"]], "chatLose": [["them", "jajaja te fuiste en volá"], ["them", "sales en el reel igual"], ["them", "¿otra?"]], "derrota": {"titulo": "Ganó Livo", "resumen": "Livo llegó primero a la bencina."}, "tutorial": {"titulo": "Carrera contra Livo", "objetivo": "Llega primero que Livo a la bencina después de 2 vueltas: Costanera, San Cristóbal y Estadio Nacional.", "c_acelerar": "Acelerar.", "c_frenar": "Frenar.", "c_doblar": "Doblar. En las curvas cerradas suelta el acelerador o frena un poco.", "c_pito": "Fumarte un pito: te da turbo por unos segundos.", "c_pausa": "Pausa · Música.", "h_pitos": "Los pitos que llevas. Recoge más en la pista: son los que brillan verdes.", "h_vola": "Sube con cada pito. Si se llena te da la pálida: la pantalla se distorsiona y la dirección se invierte un rato.", "h_mapa": "Arriba a la derecha: tu punto y el de Livo en el recorrido.", "t1": "Usa el turbo en las rectas, no justo antes de una curva.", "t2": "No fumes más de dos seguidos o te da la pálida.", "t3": "Si Livo se escapa, guarda un pito para la última recta."}},
@@ -1737,7 +1737,7 @@ const DEFAULTS = {
 };
 const SCHEMAS = {
   menu:[
-    { key:'grupo', type:'fields', label:'Grupo de la partida', fields:[['nombre', 'Nombre del grupo'], ['completo', 'Aviso cuando ya se unieron todos']] },
+    { key:'grupo', type:'fields', label:'Grupo de la partida', fields:[['nombre', 'Nombre del grupo'], ['completo', 'Aviso cuando ya se unieron todos'], ['bloqueado', 'Chat bloqueado hasta ganar el nivel anterior ({nombre} = el amigo anterior)']] },
     { key:'grupoChat', type:'chat', label:'Chat del grupo', hint:'Lo que escribe Tironi en el grupo. Los avisos de "se unió" se agregan solos al ganar cada nivel.', who:{ me:'Tironi', sys:'Aviso' } },
   ],
   nivel1:[
@@ -1804,6 +1804,9 @@ let FRIENDS = ALL_FRIENDS.filter(visible), HIDDEN = 6 - FRIENDS.length, FULL = H
 function refreshFriends() { FRIENDS = ALL_FRIENDS.filter(visible); HIDDEN = 6 - FRIENDS.length; FULL = HIDDEN === 0; const tg = document.getElementById('rel-tag'); if (tg && GATED.length) tg.textContent = 'Ya disponible · ' + (FRIENDS.length === 1 ? 'Nivel 1' : FRIENDS.length + ' niveles'); }
 const GROUP = { id:'grupo', av:{ img:GRUPO_AV } };
 const byId = (id) => FRIENDS.find((f) => f.id === id);
+// niveles en orden: para jugar uno hay que haber convencido al amigo anterior (lo ya ganado queda abierto)
+function lockedBy(f) { const i = FRIENDS.indexOf(f); if (i <= 0 || ST.done[f.id]) return null; const p = FRIENDS[i - 1]; return ST.done[p.id] ? null : p; }
+const lockText = (p) => String(TXT.menu.grupo.bloqueado || 'Primero convence a {nombre}').replace(/\{nombre\}/g, p.name);
 
 /* ---------- progreso (solo en este navegador) ---------- */
 // ?reiniciar (o #reiniciar) en la dirección: borra el progreso de este navegador para jugar como la primera vez (el apodo del ranking se mantiene)
@@ -1871,7 +1874,8 @@ function renderList() {
     const tx = TXT[f.id], r = ST.res[f.id];
     const lines = r ? r.lines : tx.chatIntro;
     // la conversación la empieza Tironi al abrir el chat: antes de eso no hay mensajes nuevos
-    const fresh = !ST.seen[f.id];
+    const fresh = !ST.seen[f.id], lk = lockedBy(f);
+    if (lk) { item({ name:f.name, av:f.av, tag:f.lvl, preview:'🔒 ' + lockText(lk), time:'', locked:true }); continue; }
     item({ name:f.name, av:f.av, tag:ST.done[f.id] ? '✓ en la partida' : f.lvl, tagOk:!!ST.done[f.id], preview:fresh ? 'Escríbele pa\' la flex ✍️' : lastText(lines), fresh, time:fresh ? '' : (r ? 'ahora' : f.time), badge:0, open:() => openChat(f.id) });
   }
   if (FULL) for (const f of SOON) item({ name:f.name, av:f.av, tag:'Próximamente', preview:'🔒 ' + f.preview, time:f.time, locked:true });
@@ -1915,6 +1919,7 @@ function foot(buttons, note, where) {
   if (note) { const p = document.createElement('p'); p.className = 'foot-note'; p.textContent = note; f.appendChild(p); }
 }
 function openChat(id, newLines) {
+  { const f0 = byId(id); if (f0 && lockedBy(f0)) return; }
   stopTimers(); const f = byId(id), tx = TXT[id]; cur = f;
   avatar($('#c-av'), f.av); $('#c-name').textContent = f.name; $('#c-status').textContent = f.status;
   $('#c-msgs').innerHTML = ''; showScreen(true); sep('HOY');
@@ -1940,7 +1945,7 @@ function openGroup() {
   groupLines().forEach(([w, x]) => addMsg(w, x));
   ST.groupSeen = FRIENDS.filter((f) => ST.done[f.id]).length; save(); renderList();
   const pending = FRIENDS.filter((f) => !ST.done[f.id]);
-  foot(pending.length ? pending.map((f) => [f.go.split(' ')[0] + ' ' + f.name, 'alt', () => openChat(f.id)]) : [], pending.length ? 'Faltan: ' + pending.map((f) => f.name).join(', ') : '');
+  foot(pending.length ? pending.filter((f) => !lockedBy(f)).map((f) => [f.go.split(' ')[0] + ' ' + f.name, 'alt', () => openChat(f.id)]) : [], pending.length ? 'Faltan: ' + pending.map((f) => f.name).join(', ') : '');
 }
 $('#back').addEventListener('click', () => { stopTimers(); cur = null; showScreen(false); renderList(); });
 addEventListener('keydown', (e) => { if (e.code !== 'Escape' || !$('#editor').hidden || !$('#stage').hidden) return; if (!$('#apodo').hidden) { closeApodo(); return; } if (!$('#scr-chat').hidden) $('#back').click(); else if (!$('#scr-rank').hidden) $('#r-back').click(); });
